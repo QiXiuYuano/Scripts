@@ -1,200 +1,39 @@
 /*
- * Trakt日历弹幕自动下载脚本 (兼容版)
- * 
- * 脚本作用：
- * 1. 从Trakt.tv获取用户的日历剧集信息
- * 2. 自动调用弹幕API下载对应剧集的弹幕
- * 3. 支持在Surge/Loon等代理工具环境中运行
- * 
- * 重要前提：
- * 此脚本需要搭配自建弹幕服务使用，项目地址：
- * https://github.com/l429609201/misaka_danmu_server
- * 
- * 使用方法：
- * 1. 在Surge/Loon中配置脚本，设置以下参数：
- *    - traktClientId: Trakt.tv应用的Client ID
- *    - traktClientSecret: Trakt.tv应用的Client Secret
- *    - traktAccessToken: Trakt.tv的访问令牌
- *    - traktRefreshToken: Trakt.tv的刷新令牌
- *    - danmuBaseUrl: 弹幕API的基础URL
- *    - danmuApiKey: 弹幕API的访问密钥
- * 2. 配置定时任务，建议每天执行一次
- * 3. 脚本会自动获取当日更新的剧集并下载弹幕
- * 
- * 参数配置方式：
- * 1. BoxJS配置（推荐）：在BoxJS中配置参数，便于管理和修改
- * 2. 环境参数配置：在Surge/Loon中通过插件参数配置
- *    注意：环境参数优先级高于BoxJS配置
- * 
- * 工作流程：
- * 1. 获取Trakt日历剧集信息
- * 2. 解析剧集数据并确定搜索策略
- * 3. 调用弹幕API自动导入接口
- * 4. 监控任务状态直至完成
- * 5. 查找并监控子任务（弹幕下载任务）
- * 6. 完成后发送通知并记录日志
- */
 
+Trakt 日历剧集弹幕自动下载脚本（Cron 类型）
 
-/*
-// Node.js环境模拟Surge环境
-if (typeof module !== 'undefined' && module.exports) {
-    // 模拟Surge环境全局变量
-    global.$environment = { "surge-version": "5.0.0" };
+需要配置 BoxJS 参数：
+traktClientId, traktClientSecret, traktAccessToken, traktRefreshToken, danmuBaseUrl, danmuApiKey
 
-    // 模拟$httpClient
-    let got;
-    let tough;
-    let iconv;
+原作者：@QiXiuYuano （https://github.com/QiXiuYuano/Scripts）
 
-    try {
-        const gotModule = require('got');
-        // 兼容不同got版本的导入方式
-        got = gotModule.default || gotModule;
-        tough = require('tough-cookie');
-        iconv = require('iconv-lite');
-    } catch (error) {
-        console.error('❌ 依赖库导入失败:', error.message);
-        console.log('请运行: npm install got tough-cookie iconv-lite');
-        process.exit(1);
-    }
+脚本功能：
+1. 自动从 Trakt.tv 获取用户日历中当日更新的剧集信息
+2. 调用自建弹幕 API 下载对应剧集弹幕
+3. 支持在 Surge、Loon 等代理工具环境中运行
+4. Cron 类型脚本，可按需求设定每日/每周定时执行
 
-    const cookieJar = new tough.CookieJar();
+-----------申请 Trakt 应用 API --------------
+1. 访问 Trakt.tv 开发者页面创建应用：https://trakt.tv/oauth/applications
+2. 获取 Client ID 与 Client Secret
+3. 使用 OAuth 获取 Access Token 与 Refresh Token
 
-    global.$httpClient = {
-        get: function (options, callback) {
-            const gotOptions = {
-                url: options.url,
-                headers: options.headers || {},
-                cookieJar: cookieJar,
-                followRedirect: options['auto-redirect'] !== false,
-                timeout: { request: 30000 },
-                retry: { limit: 0 }
-            };
+-----------配置弹幕服务--------------
+1. 自建弹幕服务，项目地址：https://github.com/l429609201/misaka_danmu_server
+2. 配置弹幕 API 基础 URL 和密钥（danmuBaseUrl, danmuApiKey）
 
-            try {
-                // 尝试不同的调用方式
-                let promise;
-                if (typeof got === 'function') {
-                    promise = got(gotOptions);
-                } else if (got && typeof got.get === 'function') {
-                    promise = got.get(gotOptions);
-                } else {
-                    throw new Error('got库无法正确调用');
-                }
+-----------软件配置（文本模式填入下方内容）--------------
 
-                promise.then(response => {
-                    callback(null, {
-                        status: response.statusCode,
-                        statusCode: response.statusCode,
-                        headers: response.headers
-                    }, response.body);
-                }).catch(error => {
-                    console.log(`❌ GET请求失败: ${error.message}`);
-                    callback(error, null, null);
-                });
-            } catch (error) {
-                console.log(`❌ GET请求调用失败: ${error.message}`);
-                callback(error, null, null);
-            }
-        },
+1. Surge:
+[Script]
+Trakt日历剧集弹幕下载 = type=cron, cron-exp="0 8 * * *", script-path=https://raw.githubusercontent.com/QiXiuYuano/Scripts/main/trakt_calendar_danmu/trakt_calendar_danmu_download.js, script-update-interval=86400
 
-        post: function (options, callback) {
+2. Loon:
+[Script]
+cron "0 8 * * *" script-path=https://raw.githubusercontent.com/QiXiuYuano/Scripts/main/trakt_calendar_danmu/trakt_calendar_danmu_download.js, tag=Trakt日历剧集弹幕下载, update-interval=86400
 
-            const gotOptions = {
-                url: options.url,
-                method: 'POST',
-                headers: options.headers || {},
-                body: options.body,
-                cookieJar: cookieJar,
-                followRedirect: options['auto-redirect'] !== false,
-                timeout: { request: 30000 },
-                retry: { limit: 0 }
-            };
-
-            try {
-                // 尝试不同的调用方式
-                let promise;
-                if (typeof got === 'function') {
-                    promise = got(gotOptions);
-                } else if (got && typeof got.post === 'function') {
-                    promise = got.post(gotOptions);
-                } else {
-                    throw new Error('got库无法正确调用');
-                }
-
-                promise.then(response => {
-                    callback(null, {
-                        status: response.statusCode,
-                        statusCode: response.statusCode,
-                        headers: response.headers
-                    }, response.body);
-                }).catch(error => {
-                    console.log(`❌ POST请求失败: ${error.message}`);
-                    callback(error, null, null);
-                });
-            } catch (error) {
-                console.log(`❌ POST请求调用失败: ${error.message}`);
-                callback(error, null, null);
-            }
-        }
-    };
-
-    // 模拟$persistentStore
-    const fs = require('fs');
-    const path = require('path');
-    const storePath = path.join(__dirname, 'surge_store.json');
-
-    let storeData = {};
-    try {
-        if (fs.existsSync(storePath)) {
-            storeData = JSON.parse(fs.readFileSync(storePath, 'utf8'));
-        }
-    } catch (e) {
-        storeData = {};
-    }
-
-    global.$persistentStore = {
-        read: function (key) {
-            return storeData[key] || null;
-        },
-        write: function (value, key) {
-            storeData[key] = value;
-            try {
-                fs.writeFileSync(storePath, JSON.stringify(storeData, null, 2));
-                return true;
-            } catch (e) {
-                return false;
-            }
-        }
-    };
-
-    // 模拟$notification
-    global.$notification = {
-        post: function (title, subtitle, body, options) {
-            console.log(`📱 通知: ${title}`);
-            if (subtitle) console.log(`   📝 ${subtitle}`);
-            if (body) console.log(`   💬 ${body}`);
-        }
-    };
-
-    // 模拟$done
-    global.$done = function (result) {
-        if (result && result.error) {
-            console.error('❌ 执行出错:', result.error);
-            process.exit(1);
-        } else {
-            process.exit(0);
-        }
-    };
-
-    // 设置脚本参数（从CONFIG对象构建参数字符串）
-    // const configParams = Object.entries(CONFIG).map(([k, v]) => `${k}=${v}`).join('&');
-    // global.$argument = configParams;
-
-    console.log('🔧 Node.js环境模拟Surge环境已启用');
-}
 */
+
 
 const $ = new Env("Trakt日历剧集弹幕下载");
 
@@ -206,33 +45,37 @@ let refreshToken = "";
 
 // ============ 脚本参数配置、验证 ============
 function getArgs() {
-    let boxjsArgs = {};
-    // 从持久化存储中读取 Box.js 配置
-    try {
-        const boxjsData = $.getjson('chavy_boxjs_settings_traktCalendarDanmuDownload', null);
-        if (boxjsData) {
-            // $.log('✅ 成功从Box.js读取配置');
-            boxjsArgs = boxjsData;
-        } else {
-            $.log('ℹ️ 未检测到 Box.js 配置');
-        }
-    } catch (e) {
-        $.log('⚠️ Box.js 配置读取失败: ' + e.message);
-    }
+    // 逐字段读取 BoxJs 配置（推荐）
+    let boxjsArgs = {
+        traktClientId:     $.getdata('traktClientId')     || '',
+        traktClientSecret: $.getdata('traktClientSecret') || '',
+        traktAccessToken:  $.getdata('traktAccessToken')  || '',
+        traktRefreshToken: $.getdata('traktRefreshToken') || '',
+        danmuBaseUrl:      $.getdata('danmuBaseUrl')      || '',
+        danmuApiKey:       $.getdata('danmuApiKey')       || ''
+    };
+
+    // 检查是否缺少配置
+    const missingKeys = Object.entries(boxjsArgs)
+        .filter(([_, v]) => !v)
+        .map(([k]) => k);
 
     // 解析环境参数
     let envArgs = {};
-
-    if (typeof $argument === 'object' && $argument !== null) {
-        $.log("🔍 检测到 Loon 环境参数格式 (对象)");
-        envArgs = $argument;
-    } else if (typeof $argument === 'string') {
-        $.log("🔍 检测到 Surge 环境参数格式 (字符串)");
-        let argStr = $argument || "";
-        argStr.split("&").forEach(item => {
-            let [k, v] = item.split("=");
-            if (k) envArgs[k] = v;
-        });
+    if ($.isLoon()) {
+        $.log("🔍 检测到 Loon 环境");
+        if (typeof $argument === 'object' && $argument !== null) {
+            envArgs = $argument;
+        }
+    } else if ($.isSurge()) {
+        $.log("🔍 检测到 Surge 环境");
+        if (typeof $argument === 'string') {
+            let argStr = $argument || "";
+            argStr.split("&").forEach(item => {
+                let [k, v] = item.split("=");
+                if (k) envArgs[k] = v;
+            });
+        }
     }
 
     // 合并参数，环境参数优先级更高
