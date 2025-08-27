@@ -13,7 +13,6 @@
 ### Box.js 订阅地址
 ```
 https://raw.githubusercontent.com/QiXiuYuano/Scripts/main/qixiuyuan.boxjs.json
-
 ```
 
 ## 免责声明
