@@ -10,7 +10,7 @@
  * - 支持多条线路，自动区分主线路与备用线路
  * 
  * 作者：https://github.com/QiXiuYuano
- * 脚本地址：https://github.com/QiXiuYuano/ForwardWidgets/new/main/scheme/emby_scheme_generator.js
+ * 脚本地址：https://raw.githubusercontent.com/QiXiuYuano/Scripts/refs/heads/main/scheme_generate/emby_scheme_generator.js
  * 转载请保留来源
  */
 
