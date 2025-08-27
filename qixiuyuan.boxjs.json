@@ -1,0 +1,92 @@
+{
+  "id": "qixuiyuan.app.sub",
+  "name": "QiXiuYuan的脚本订阅",
+  "author": "@QiXiuYuano",
+  "icon": "https://raw.githubusercontent.com/QiXiuYuano/Profiles/main/icon/qixiuyuan.png",
+  "repo": "https://github.com/QiXiuYuano/Scripts",
+  "apps": [
+    {
+      "id": "traktCalendarDanmuDownload",
+      "name": "Trakt日历剧集弹幕下载",
+      "icons": [
+        "https://raw.githubusercontent.com/QiXiuYuano/Profiles/main/icon/trakt.png"
+      ],
+      "author": "@QiXiuYuano",
+      "repo": "https://github.com/QiXiuYuano/Scripts",
+      "script": "https://raw.githubusercontent.com/QiXiuYuano/Scripts/refs/heads/main/trakt_calendar_danmu/trakt_calendar_danmu_download.js",
+      "descs_html": [
+        "<h3>Trakt日历剧集弹幕自动下载工具</h3>",
+        "<p>自动从 Trakt.tv 获取用户日历中的剧集更新信息，并调用弹幕 API 下载对应剧集的弹幕文件。</p>",
+        "<h4>重要说明：</h4>",
+        "<p>此脚本需要搭配自建弹幕服务使用，项目地址：<a href='https://github.com/l429609201/misaka_danmu_server'>misaka_danmu_server</a></p>",
+        "<h4>主要功能：</h4>",
+        "<ul>",
+        "<li>自动获取 Trakt 日历剧集更新</li>",
+        "<li>智能匹配剧集信息（支持 TMDB/IMDB/TVDB）</li>",
+        "<li>自动调用弹幕 API 下载弹幕</li>",
+        "<li>任务状态监控和进度跟踪</li>",
+        "</ul>",
+        "<h4>使用说明：</h4>",
+        "<ol>",
+        "<li>在 <a href='https://trakt.tv/oauth/applications'>Trakt.tv 开发者页面</a> 创建应用获取 Client ID 和 Secret</li>",
+        "<li>使用 OAuth 认证获取 Access Token 和 Refresh Token</li>",
+        "<li>配置弹幕 API 地址和密钥</li>",
+        "<li>在代理工具中设置定时任务定期执行脚本</li>",
+        "</ol>",
+        "<p>根据需求设定执行时间及次数，自动下载当日更新剧集的弹幕。</p>"
+      ],
+      "keys": [
+        "traktClientId",
+        "traktClientSecret",
+        "traktAccessToken",
+        "traktRefreshToken",
+        "danmuBaseUrl",
+        "danmuApiKey"
+      ],
+      "settings": [
+        {
+          "id": "traktClientId",
+          "name": "Trakt Client ID",
+          "val": "",
+          "type": "text",
+          "desc": "在 Trakt.tv 开发者页面创建的应用获取的 Client ID"
+        },
+        {
+          "id": "traktClientSecret",
+          "name": "Trakt Client Secret",
+          "val": "",
+          "type": "text",
+          "desc": "在 Trakt.tv 开发者页面创建的应用获取的 Client Secret"
+        },
+        {
+          "id": "traktAccessToken",
+          "name": "Trakt Access Token",
+          "val": "",
+          "type": "text",
+          "desc": "通过 OAuth 认证获取的访问令牌（脚本会自动刷新）"
+        },
+        {
+          "id": "traktRefreshToken",
+          "name": "Trakt Refresh Token",
+          "val": "",
+          "type": "text",
+          "desc": "用于刷新 Access Token 的刷新令牌"
+        },
+        {
+          "id": "danmuBaseUrl",
+          "name": "弹幕 API 基础地址",
+          "val": "",
+          "type": "text",
+          "desc": "弹幕服务的 API 基础 URL，例如: https://danmu.yourdomain.com"
+        },
+        {
+          "id": "danmuApiKey",
+          "name": "弹幕 API 密钥",
+          "val": "",
+          "type": "text",
+          "desc": "访问弹幕 API 所需的密钥"
+        }
+      ]
+    }
+  ]
+}
