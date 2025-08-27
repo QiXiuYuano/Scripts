@@ -1,6 +1,6 @@
 #!name=Trakt日历剧集弹幕下载
 #!desc=每天根据 Trakt 日历自动导入弹幕到弹幕库，并在任务完成后通知
-#!author=@QiXiuYuano
+#!author=https://github.com/QiXiuYuano
 #!arguments=danmuBaseUrl,danmuApiKey,traktClientId,traktClientSecret,traktAccessToken,traktRefreshToken,cron
 #!arguments-desc=参数说明：
 # - danmuBaseUrl: 弹幕服务地址
