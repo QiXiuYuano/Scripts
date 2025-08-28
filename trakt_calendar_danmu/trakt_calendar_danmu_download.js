@@ -79,6 +79,10 @@ function getArgs() {
     }
 
     // 合并参数，环境参数优先级更高
+    Object.keys(envArgs).forEach(key => {
+        if (!envArgs[key]) delete envArgs[key];
+    });
+    
     const finalArgs = { ...boxjsArgs, ...envArgs };
 
     return finalArgs;
