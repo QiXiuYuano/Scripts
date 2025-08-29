@@ -1,7 +1,8 @@
 #!name=Trakt日历剧集弹幕下载
 #!desc=每天根据 Trakt 日历自动导入弹幕到弹幕库，并在任务完成后通知
 #!author=https://github.com/QiXiuYuano
-#!arguments=danmuBaseUrl,danmuApiKey,traktClientId,traktClientSecret,traktAccessToken,traktRefreshToken,cron
+#!arguments=cron
+#arguments=danmuBaseUrl,danmuApiKey,traktClientId,traktClientSecret,traktAccessToken,traktRefreshToken,cron
 #!arguments-desc=参数说明：
 # - danmuBaseUrl: 弹幕服务地址
 # - danmuApiKey: 弹幕服务 API Key
@@ -13,4 +14,4 @@
 
 [Script]
 # 定时任务
-Trakt-Calendar-Danmu-Download = type=cron, cronexp={{{cron}}}, script-path=trakt_calendar_danmu_download.js, script-update-interval=86400, timeout=600, argument=danmuBaseUrl={{{danmuBaseUrl}}}&danmuApiKey={{{danmuApiKey}}}&traktClientId={{{traktClientId}}}&traktClientSecret={{{traktClientSecret}}}&traktAccessToken={{{traktAccessToken}}}&traktRefreshToken={{{traktRefreshToken}}}
+Trakt-Calendar-Danmu-Download = type=cron, cronexp={{{cron}}}, script-path=trakt_calendar_danmu_download.js, script-update-interval=86400, timeout=600, # argument=danmuBaseUrl={{{danmuBaseUrl}}}&danmuApiKey={{{danmuApiKey}}}&traktClientId={{{traktClientId}}}&traktClientSecret={{{traktClientSecret}}}&traktAccessToken={{{traktAccessToken}}}&traktRefreshToken={{{traktRefreshToken}}}
