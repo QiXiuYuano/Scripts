@@ -2,7 +2,7 @@
 
 Trakt 日历剧集弹幕自动下载脚本（Cron 类型）
 
-需要配置 BoxJS 参数：
+需要在surge模块/Loon插件中配置以下参数：
 traktClientId, traktClientSecret, traktAccessToken, traktRefreshToken, danmuBaseUrl, danmuApiKey
 
 原作者：@QiXiuYuano （https://github.com/QiXiuYuano/Scripts）
@@ -45,56 +45,39 @@ let refreshToken = "";
 
 // ============ 脚本参数配置、验证 ============
 function getArgs() {
-    // 逐字段读取 BoxJs 配置（推荐）
-    let boxjsArgs = {
-        traktClientId:     $.getdata('traktClientId')     || '',
-        traktClientSecret: $.getdata('traktClientSecret') || '',
-        traktAccessToken:  $.getdata('traktAccessToken')  || '',
-        traktRefreshToken: $.getdata('traktRefreshToken') || '',
-        danmuBaseUrl:      $.getdata('danmuBaseUrl')      || '',
-        danmuApiKey:       $.getdata('danmuApiKey')       || ''
-    };
-
-    // 检查是否缺少配置
-    const missingKeys = Object.entries(boxjsArgs)
-        .filter(([_, v]) => !v)
-        .map(([k]) => k);
-
-    // 解析环境参数
+    // 只从 Surge / Loon argument 读取初始配置，BoxJs 不再使用
     let envArgs = {};
-    if ($.isLoon()) {
+
+    if (typeof $ !== "undefined" && typeof $.isLoon === "function" && $.isLoon()) {
         $.log("🔍 检测到 Loon 环境");
         if (typeof $argument === 'object' && $argument !== null) {
             envArgs = $argument;
         }
-    } else if ($.isSurge()) {
+    } else if (typeof $ !== "undefined" && typeof $.isSurge === "function" && $.isSurge()) {
         $.log("🔍 检测到 Surge 环境");
-        if (typeof $argument === 'string') {
-            let argStr = $argument || "";
-            argStr.split("&").forEach(item => {
-                let [k, v] = item.split("=");
-                if (k) envArgs[k] = v;
+        if (typeof $argument === "string" && $argument.trim()) {
+            $argument.split("&").forEach(item => {
+                const [k, v] = item.split("=");
+                if (k && v) envArgs[k] = v;
             });
         }
     }
 
-    // 合并参数，环境参数优先级更高
-    Object.keys(envArgs).forEach(key => {
-        if (!envArgs[key]) delete envArgs[key];
-    });
-    
-    const finalArgs = { ...boxjsArgs, ...envArgs };
-
-    return finalArgs;
+    return envArgs; // environment args 作为首次运行配置
 }
 
-// Token获取和验证
+// ============ Token 获取和验证 ============
 function initializeTokens() {
-    // 从持久化存储或参数中获取Token
-    const accessToken = $.getdata("trakt_access_token") || args.traktAccessToken || "";
-    const refreshToken = $.getdata("trakt_refresh_token") || args.traktRefreshToken || "";
+    // 优先从持久化存储读取 token
+    let accessToken = $.getdata("trakt_access_token") || "";
+    let refreshToken = $.getdata("trakt_refresh_token") || "";
+
+    // 如果持久化没有，再用首次运行的 argument
+    if (!accessToken) accessToken = args.traktAccessToken || "";
+    if (!refreshToken) refreshToken = args.traktRefreshToken || "";
 
     $.log(`🔑 Token状态 - traktAccessToken: ${accessToken ? '✅' : '❌'}, traktRefreshToken: ${refreshToken ? '✅' : '❌'}`);
+
     return { accessToken, refreshToken };
 }
 
