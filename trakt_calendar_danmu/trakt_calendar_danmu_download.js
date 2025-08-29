@@ -83,8 +83,7 @@ function getArgs() {
         if (!envArgs[key]) delete envArgs[key];
     });
     
-    // const finalArgs = { ...boxjsArgs, ...envArgs };
-    const finalArgs = { ...envArgs, ...boxjsArgs };
+    const finalArgs = { ...boxjsArgs, ...envArgs };
 
     return finalArgs;
 }
