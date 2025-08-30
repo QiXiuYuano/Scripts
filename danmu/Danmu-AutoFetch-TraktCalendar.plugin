@@ -1,4 +1,4 @@
-#!name=Danmu AutoFetch (by Trakt Calendar)
+#!name=Danmu-AutoFetch-TraktCalendar
 #!desc=根据 Trakt 日历更新的剧集信息，自动调用自建弹幕服务下载并导入弹幕
 #!author=https://github.com/QiXiuYuano
 #!arguments=danmuBaseUrl,danmuApiKey,traktClientId,traktClientSecret,traktAccessToken,traktRefreshToken,cron
