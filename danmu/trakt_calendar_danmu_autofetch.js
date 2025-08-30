@@ -1,11 +1,11 @@
 /*
 
-Trakt 日历剧集弹幕自动下载脚本（Cron 类型）
+根据Trakt日历更新剧集自动下载弹幕脚本
 
-需要在surge模块/Loon插件中配置以下参数：
+需要在Surge模块/Loon插件中配置以下参数：
 traktClientId, traktClientSecret, traktAccessToken, traktRefreshToken, danmuBaseUrl, danmuApiKey
 
-原作者：@QiXiuYuano （https://github.com/QiXiuYuano/Scripts）
+作者：@QiXiuYuano （https://github.com/QiXiuYuano/Scripts）
 
 脚本功能：
 1. 自动从 Trakt.tv 获取用户日历中当日更新的剧集信息
@@ -26,16 +26,16 @@ traktClientId, traktClientSecret, traktAccessToken, traktRefreshToken, danmuBase
 
 1. Surge:
 [Script]
-Trakt日历剧集弹幕下载 = type=cron, cron-exp="0 8 * * *", script-path=https://raw.githubusercontent.com/QiXiuYuano/Scripts/main/trakt_calendar_danmu/trakt_calendar_danmu_download.js, script-update-interval=86400
+Danmu-AutoFetch-TraktCalendar = type=cron, cron-exp="0 18 * * *", script-path=https://raw.githubusercontent.com/QiXiuYuano/Scripts/main/danmu/trakt_calendar_danmu_autofetch.js, script-update-interval=86400
 
 2. Loon:
 [Script]
-cron "0 8 * * *" script-path=https://raw.githubusercontent.com/QiXiuYuano/Scripts/main/trakt_calendar_danmu/trakt_calendar_danmu_download.js, tag=Trakt日历剧集弹幕下载, update-interval=86400
+cron "0 18 * * *" script-path=https://raw.githubusercontent.com/QiXiuYuano/Scripts/main/danmu/trakt_calendar_danmu_autofetch.js, tag=Danmu-AutoFetch-TraktCalendar, update-interval=86400
 
 */
 
 
-const $ = new Env("Trakt日历剧集弹幕下载");
+const $ = new Env("Danmu-AutoFetch-TraktCalendar");
 
 const scriptStartTime = Date.now();
 let today = new Date().toISOString().split("T")[0];
