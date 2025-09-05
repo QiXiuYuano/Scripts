@@ -441,17 +441,13 @@ async function waitForTaskCompletion(taskId) {
             $.log(`[任务监控] ${taskInfo.title} - 状态: ${taskInfo.status}, 进度: ${taskInfo.progress}%`);
 
             if (taskInfo.status === 'COMPLETED' || taskInfo.status === '已完成') {
-                if (taskInfo.title.includes("外部API自动导入")) {
-                    $.log(`[任务监控] ${taskInfo.title} (ID: ${taskInfo.taskId}) 已成功完成!`);
-                } else {
-                    $.log(`[任务监控] ${taskInfo.title} - 弹幕下载任务完成!`);
-                }
-
+                $.log(`[任务监控] ${taskInfo.title} - 弹幕下载任务完成!`);
                 return taskInfo;
             } else if (taskInfo.status === 'FAILED' || taskInfo.status === '失败') {
                 $.log(`[任务监控] ${taskInfo.title} - 任务失败: ${taskInfo.description}`);
                 return null;
             }
+            
             // 等待5秒后再次检查
             await new Promise(resolve => setTimeout(resolve, 5000));
             attempts++;
@@ -465,69 +461,85 @@ async function waitForTaskCompletion(taskId) {
     return null;
 }
 
+// 获取调度任务的执行任务ID（单次请求）
+function getExecutionTaskId(schedulerTaskId) {
+    return new Promise((resolve, reject) => {
+        const url = `${args.danmuBaseUrl}/api/control/tasks/${schedulerTaskId}/execution?api_key=${args.danmuApiKey}`;
+        
+        $.get(
+            {
+                url: url,
+                headers: {}
+            },
+            (err, resp, data) => {
+                if (err) {
+                    $.log(`[执行任务查询] ${schedulerTaskId} 请求错误: ${err}`);
+                    return reject(err);
+                }
 
-// 查找子任务
-async function findSubTask(parentTaskId) {
-    try {
-        // 获取最近的任务列表
-        const taskList = await getRecentTasks(5);
+                const status = resp?.status || 'unknown';
 
-        // 找到父任务在列表中的索引
-        const parentTaskIndex = taskList.findIndex(task => task.taskId === parentTaskId);
-
-        if (parentTaskIndex === -1) {
-            $.log(`❌ 未在任务列表中找到父任务: ${parentTaskId}`);
-            return null;
-        }
-
-        // 子任务索引
-        const subTaskIndex = parentTaskIndex - 1;
-
-        if (subTaskIndex < 0) {
-            $.log(`⚠️ 父任务是列表中的第一个任务，没有子任务`);
-            return null;
-        }
-
-        const parentTask = taskList[parentTaskIndex]
-        const subTask = taskList[subTaskIndex];
-
-        // 验证候选任务确实是子任务
-        if (subTask.title.includes('自动导入 (库内)') ||
-            subTask.title.includes('自动导入 (新)')) {
-
-            const parentTaskTime = new Date(parentTask.createdAt);
-            const subTaskTime = new Date(subTask.createdAt);
-            if (parentTaskTime < subTaskTime) {
-                return subTask;
+                if (status === 200) {
+                    try {
+                        const result = JSON.parse(data);
+                        resolve(result.executionTaskId); // 直接返回executionTaskId，可能为null
+                    } catch (e) {
+                        $.log(`[执行任务查询] ${schedulerTaskId} 数据解析错误: ${e.message}`);
+                        reject(new Error(`数据解析失败: ${e.message}`));
+                    }
+                } else if (status === 422) {
+                    $.log(`[执行任务查询] ${schedulerTaskId} 参数验证失败: ${data}`);
+                    reject(new Error(`参数验证失败: ${data}`));
+                } else if (status === 401 || status === 403) {
+                    $.log(`[执行任务查询] API认证失败`);
+                    reject(new Error('API认证失败，请检查API密钥'));
+                } else {
+                    $.log(`[执行任务查询] HTTP错误: ${status}, 响应: ${data}`);
+                    reject(new Error(`HTTP ${status}: ${data || '未知错误'}`));
+                }
             }
-        } else {
-            $.log(`❌ 候选任务不是预期的子任务类型: ${subTask.title}`);
-            return null;
-        }
-
-    } catch (error) {
-        $.log(`❌ 索引查找失败: ${error.message}`);
-        return null;
-    }
+        );
+    });
 }
 
-// 获取最近的任务列表
-async function getRecentTasks(limit = 5) {
-    const url = `${args.danmuBaseUrl}/api/control/tasks?search=自动导入&status=all&api_key=${args.danmuApiKey}`;
+// 轮询获取执行任务ID，直到获取到有效ID
+async function findExecutionTaskId(schedulerTaskId, maxRetries = 10, retryDelay = 1000) {
+    $.log(`🔍 开始轮询调度任务 ${schedulerTaskId} 的执行任务ID`);
 
-    return new Promise((resolve, reject) => {
-        $.get({ url }, (err, resp, data) => {
-            if (err) return reject(err);
-            if (resp?.status !== 200) return reject(new Error(`HTTP ${resp.status}`));
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            $.log(`🔍 第${attempt}次尝试获取执行任务ID...`);
+            
+            const executionTaskId = await getExecutionTaskId(schedulerTaskId);
 
-            try {
-                const tasks = JSON.parse(data);
-                resolve(tasks.slice(0, limit));
-            } catch (e) {
-                reject(e);
+            // 检查是否获取到有效的执行任务ID
+            if (!executionTaskId) {
+                if (attempt === maxRetries) {
+                    $.log(`❌ 调度任务 ${schedulerTaskId} 在${maxRetries}次尝试后仍未生成有效的执行任务ID`);
+                    return null;
+                } else {
+                    $.log(`⚠️ 调度任务 ${schedulerTaskId} 暂未触发执行任务，${retryDelay / 1000}秒后重试...`);
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                    continue;
+                }
             }
-        });
-    });
+
+            // 找到有效的执行任务ID
+            $.log(`✅ 调度任务 ${schedulerTaskId} 已触发执行任务: ${executionTaskId}`);
+            return executionTaskId;
+
+        } catch (error) {
+            if (attempt === maxRetries) {
+                $.log(`❌ 获取执行任务ID最终失败: ${error.message}`);
+                return null;
+            } else {
+                $.log(`⚠️ 第${attempt}次尝试失败: ${error.message}，${retryDelay / 1000}秒后重试...`);
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+            }
+        }
+    }
+
+    return null;
 }
 
 
@@ -580,32 +592,27 @@ async function processEpisode(show) {
 
     try {
         // 步骤1: 调用自动导入API
-        const parentTaskResponse = await callDanmuAutoImport(
+        const schedulerTaskResponse = await callDanmuAutoImport(
             episodeData.searchType,
             episodeData.searchTerm,
             episodeData.season,
             episodeData.episode
         );
 
-        // 步骤2: 等待父任务完成
-        const parentTaskInfo = await waitForTaskCompletion(parentTaskResponse.taskId);
-        if (!parentTaskInfo) {
-            $.log(`❌ 外部 API ${parentTaskResponse.message}, ID: ${parentTaskResponse.taskId} 任务失败`);
+        // 步骤2: 查找执行任务ID
+        const executionTaskId = await findExecutionTaskId(schedulerTaskResponse.taskId);
+        if (!executionTaskId) {
+            $.log(`❌ ${episodeInfo} 未找到弹幕下载执行任务`);
             return null;
         }
-        // 步骤3: 查找子任务
-        const subTask = await findSubTask(parentTaskResponse.taskId);
-        if (!subTask) {
-            $.log(`❌ ${episodeInfo} 未找到弹幕下载任务`);
-            return null;
-        }
-        // 步骤4: 等待子任务完成
-        const subTaskInfo = await waitForTaskCompletion(subTask.taskId);
-        if (!subTaskInfo) {
-            $.log(`❌ ${episodeInfo} 弹幕下载失败: ${error.message}`);
+
+        // 步骤3: 等待执行任务完成
+        const executionTaskInfo = await waitForTaskCompletion(executionTaskId);
+        if (!executionTaskInfo) {
+            $.log(`❌ ${episodeInfo} 弹幕下载失败`);
             return null;
         } else {
-            return subTaskInfo;
+            return executionTaskInfo;
         }
     } catch (error) {
         $.log(`❌ ${episodeInfo} 弹幕下载失败: ${error.message}`);
@@ -661,8 +668,8 @@ async function main() {
 
             // 在处理下一个剧集前等待一段时间，避免API频率限制
             if (i < shows.length - 1) {
-                $.log("⏳ 等待3秒后处理下一个剧集...");
-                await new Promise(resolve => setTimeout(resolve, 3000));
+                $.log("⏳ 等待2秒后处理下一个剧集...");
+                await new Promise(resolve => setTimeout(resolve, 2000));
             }
         }
 
