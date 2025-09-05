@@ -503,7 +503,7 @@ function getExecutionTaskId(schedulerTaskId) {
 }
 
 // 轮询获取执行任务ID，直到获取到有效ID
-async function findExecutionTaskId(schedulerTaskId, maxRetries = 10, retryDelay = 1000) {
+async function findExecutionTaskId(schedulerTaskId, maxRetries = 10, retryDelay = 5000) {
     $.log(`🔍 开始轮询调度任务 ${schedulerTaskId} 的执行任务ID`);
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
