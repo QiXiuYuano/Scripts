@@ -6,13 +6,13 @@
 #!date = 2025-09-06 18:20:00
 
 [Argument]
-danmuBaseUrl = input,"",desc=弹幕服务器URL
-danmuApiKey = input,"",desc=弹幕服务器API key
-traktClientId = input,"",desc=Trakt 应用的 Client ID
-traktClientSecret = input,"",desc=Trakt 应用的 Client Secret
-traktAccessToken = input,"",desc=Trakt 授权的 Access Token
-traktRefreshToken = input,"",desc=Trakt 授权的 Refresh Token
-cron = input,"0 18 * * *",desc=定时任务执行时间，默认为每天 18 点执行
+danmuBaseUrl = input,desc=弹幕服务器URL
+danmuApiKey = input,desc=弹幕服务器API key
+traktClientId = input,desc=Trakt 应用的 Client ID
+traktClientSecret = input,desc=Trakt 应用的 Client Secret
+traktAccessToken = input,desc=Trakt 授权的 Access Token
+traktRefreshToken = input,desc=Trakt 授权的 Refresh Token
+cron = input,desc=定时任务执行时间，默认为每天 18 点执行
 
 [Script]
 cron "{{{cron}}}" script-path=https://raw.githubusercontent.com/QiXiuYuano/Scripts/refs/heads/main/danmu/trakt_calendar_danmu_autofetch.js, tag=Danmu-AutoFetch-TraktCalendar, update-interval=86400
