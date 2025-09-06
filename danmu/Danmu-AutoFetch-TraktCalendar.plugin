@@ -15,4 +15,4 @@ traktRefreshToken = input,"",desc=Trakt 授权的 Refresh Token
 cron = input,"0 18 * * *",desc=定时任务执行时间，默认为每天 18 点执行
 
 [Script]
-cron "{{{cron}}}" script-path=https://raw.githubusercontent.com/QiXiuYuano/Scripts/main/danmu/trakt_calendar_danmu_autofetch.js, tag=Danmu-AutoFetch-TraktCalendar, update-interval=86400
+cron "{{{cron}}}" script-path=https://raw.githubusercontent.com/QiXiuYuano/Scripts/refs/heads/main/danmu/trakt_calendar_danmu_autofetch.js, tag=Danmu-AutoFetch-TraktCalendar, update-interval=86400
