@@ -703,7 +703,7 @@ async function main() {
             successRate: shows.length > skipCount ? ((successCount / (shows.length - skipCount)) * 100).toFixed(1) : "0.0"
         };
 
-        const scriptDuration = ((Date.now() - scriptStartTime) / 1000 / 60).toFixed(1); // 总执行时间（分钟）
+        const scriptDuration = ((Date.now() - scriptStartTime) / 1000).toFixed(1); // 总执行时间（秒）
         $.log(`\n📊 处理完成统计:`);
         $.log(`   ✅ 成功: ${report.success} 个`);
         $.log(`   ❌ 失败: ${report.failed} 个`);
@@ -717,7 +717,7 @@ async function main() {
         if (notificationMessages.length > 0) {
             const summary = `✅ 成功: ${successCount}  ❌ 失败: ${failCount}  ⏩ 跳过: ${skipCount}`;
             // 将耗时信息添加到通知正文末尾
-            const body = notificationMessages.join("\n") + `\n\n🕐 总耗时: ${scriptDuration} 分钟`;
+            const body = "\n" + notificationMessages.join("\n") + `\n\n🕐 总耗时: ${scriptDuration} 秒`;
             $.msg(title, summary, body);
         } else {
             // 没有剧集需要处理的情况  
@@ -729,9 +729,9 @@ async function main() {
         $.done();
 
     } catch (e) {
-        const scriptDuration = ((Date.now() - scriptStartTime) / 1000 / 60).toFixed(1);
+        const scriptDuration = ((Date.now() - scriptStartTime) / 1000).toFixed(1);
         $.log("❌ 脚本出错:", e);
-        $.log(`🕐 脚本执行时间: ${scriptDuration} 分钟`);
+        $.log(`🕐 脚本执行时间: ${scriptDuration} 秒`);
         $.msg("Trakt日历更新剧集弹幕下载", "脚本执行出错", e.message);
         $.done();
     }
