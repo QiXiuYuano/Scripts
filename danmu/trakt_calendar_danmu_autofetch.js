@@ -447,7 +447,7 @@ async function waitForTaskCompletion(taskId) {
                 $.log(`[任务监控] ${taskInfo.title} - 任务失败: ${taskInfo.description}`);
                 return null;
             }
-            
+
             // 等待5秒后再次检查
             await new Promise(resolve => setTimeout(resolve, 5000));
             attempts++;
@@ -465,7 +465,7 @@ async function waitForTaskCompletion(taskId) {
 function getExecutionTaskId(schedulerTaskId) {
     return new Promise((resolve, reject) => {
         const url = `${args.danmuBaseUrl}/api/control/tasks/${schedulerTaskId}/execution?api_key=${args.danmuApiKey}`;
-        
+
         $.get(
             {
                 url: url,
@@ -509,7 +509,7 @@ async function findExecutionTaskId(schedulerTaskId, maxRetries = 10, retryDelay 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             $.log(`🔍 第${attempt}次尝试获取执行任务ID...`);
-            
+
             const executionTaskId = await getExecutionTaskId(schedulerTaskId);
 
             // 检查是否获取到有效的执行任务ID
@@ -552,6 +552,7 @@ function parseEpisodeData(show) {
         season: show.episode.season,
         episode: show.episode.number,
         episodeTitle: show.episode.original_title,
+        airDate: show.first_aired,
 
         // 外部ID信息
         ids: {
@@ -640,30 +641,52 @@ async function main() {
         $.log("🎯 开始自动下载弹幕...");
         let successCount = 0;
         let failCount = 0;
+        let skipCount = 0; // 新增跳过计数器
 
-        // 使用现代循环处理剧集
+        // 用于存储通知信息的数组
+        const notificationMessages = [];
+
         for (let i = 0; i < shows.length; i++) {
             const show = shows[i];
+
+            const airTime = new Date(show.first_aired).getTime();
+            const shanghaiTimeOffset = 8 * 60 * 60 * 1000;
+            const shanghaiAirTime = airTime + shanghaiTimeOffset;
+            const currentTime = Date.now();
+
+            // 如果脚本执行时尚未到剧集播放时间，则跳过该集
+            if (currentTime < shanghaiAirTime) {
+                const showInfo = `${show.show.original_title} - S${show.episode.season}E${show.episode.number} (${show.episode.original_title})`;
+                $.log(`⏩ ${showInfo} 尚未到播放时间 (${show.first_aired})，跳过下载任务`);
+                notificationMessages.push(`⏩ ${showInfo} - 未到播放时间，已跳过`);
+                skipCount++;
+                continue;
+            }
+
             const showInfo = `${show.show.original_title} - S${show.episode.season}E${show.episode.number} (${show.episode.original_title})`;
-            $.log(`📍 今日更新剧集弹幕下载进度: ${i + 1}/${shows.length}`);
+            // $.log(`📍 今日更新剧集弹幕下载进度: ${i + 1}/${shows.length}`);
+            $.log(`📍 今日更新剧集弹幕下载进度: ${i + 1 - skipCount}/${shows.length - skipCount}`);
 
             try {
                 const taskInfo = await processEpisode(show);
                 if (taskInfo) {
                     successCount++;
                     $.log(`🎉 任务: ${taskInfo.title} 完成`, `🔔 消息: ${taskInfo.description}`);
-                    $.msg(`🔔 ${showInfo} 已更新!`, `🎉 弹幕${taskInfo.description}`);
+                    // $.msg(`🔔 ${showInfo} 已更新!`, `🎉 弹幕${taskInfo.description}`);
+                    notificationMessages.push(`✅ ${showInfo} - 弹幕${taskInfo.description}`);
                 } else {
                     failCount++;
                     // 单个剧集下载失败立即通知
-                    $.msg(`❌ ${showInfo}`, `弹幕下载失败`);
                     $.log(`❌ ${showInfo} 弹幕下载失败`);
+                    // $.msg(`❌ ${showInfo}`, `弹幕下载失败`);
+                    notificationMessages.push(`❌ ${showInfo} - 弹幕下载失败`);
                 }
             } catch (error) {
                 failCount++;
                 // 单个剧集处理出错立即通知
-                $.msg(`❌ ${showInfo}`, `处理过程中出错`, error.message);
                 $.log(`❌ 处理剧集失败: ${error.message}`);
+                // $.msg(`❌ ${showInfo}`, `处理过程中出错`, error.message);
+                notificationMessages.push(`❌ ${showInfo} - 处理过程中出错: ${error.message}`);
             }
 
             // 在处理下一个剧集前等待一段时间，避免API频率限制
@@ -677,24 +700,34 @@ async function main() {
         const report = {
             success: successCount,
             failed: failCount,
+            skipped: skipCount, // 新增跳过统计
             total: shows.length,
-            successRate: ((successCount / shows.length) * 100).toFixed(1)
+            successRate: shows.length > skipCount ? ((successCount / (shows.length - skipCount)) * 100).toFixed(1) : "0.0"
         };
 
         const scriptDuration = ((Date.now() - scriptStartTime) / 1000 / 60).toFixed(1); // 总执行时间（分钟）
         $.log(`\n📊 处理完成统计:`);
         $.log(`   ✅ 成功: ${report.success} 个`);
         $.log(`   ❌ 失败: ${report.failed} 个`);
+        $.log(`   ⏩ 跳过: ${report.skipped} 个`);
         $.log(`   📈 总计: ${report.total} 个`);
         $.log(`   📊 成功率: ${report.successRate}%`);
         $.log(`   🕐 总耗时: ${scriptDuration} 分钟`);
 
-        // 最终汇总通知
-        const resultMessage = report.failed === 0
-            ? `全部成功！总共下载了 ${report.total} 个剧集弹幕`
-            : `部分成功：下载了 ${report.success}/${report.total} 个剧集弹幕 (${report.successRate}%)`;
+        // 发送剧集下载结果的汇总通知
+        const title = "Trakt日历剧集弹幕下载结果";
+        if (notificationMessages.length > 0) {
+            const summary = `✅ 成功: ${successCount}  ❌ 失败: ${failCount}  ⏩ 跳过: ${skipCount}`;
+            // 将耗时信息添加到通知正文末尾
+            const body = notificationMessages.join("\n") + `\n\n🕐 总耗时: ${scriptDuration} 分钟`;
+            $.msg(title, summary, body);
+        } else {
+            // 没有剧集需要处理的情况  
+            const summary = "ℹ️ 无下载任务";
+            const body = `今日没有需要处理的剧集\n\n🕐 总耗时: ${scriptDuration} 分钟`;
+            $.msg(title, summary, body);
+        }
 
-        $.msg("Trakt日历更新剧集弹幕下载", resultMessage, `总耗时: ${scriptDuration} 分钟`);
         $.done();
 
     } catch (e) {
