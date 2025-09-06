@@ -649,13 +649,11 @@ async function main() {
         for (let i = 0; i < shows.length; i++) {
             const show = shows[i];
 
-            const airTime = new Date(show.first_aired).getTime();
-            const shanghaiTimeOffset = 8 * 60 * 60 * 1000;
-            const shanghaiAirTime = airTime + shanghaiTimeOffset;
-            const currentTime = Date.now();
+            const airTime = new Date(show.first_aired);
+            const currentTime = new Date();
 
             // 如果脚本执行时尚未到剧集播放时间，则跳过该集
-            if (currentTime < shanghaiAirTime) {
+            if (currentTime < airTime) {
                 const showInfo = `${show.show.original_title} - S${show.episode.season}E${show.episode.number} (${show.episode.original_title})`;
                 $.log(`⏩ ${showInfo} 尚未到播放时间 (${show.first_aired})，跳过下载任务`);
                 notificationMessages.push(`⏩ ${showInfo} - 未到播放时间，已跳过`);
